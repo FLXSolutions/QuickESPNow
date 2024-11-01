@@ -6,7 +6,6 @@ QuickEspNow quickEspNow;
 
 constexpr auto PEERLIST_TAG = "PEERLIST";
 
-
 bool QuickEspNow::begin (uint8_t channel, uint32_t wifi_interface, bool synchronousSend) {
 
     wifi_second_chan_t ch2 = WIFI_SECOND_CHAN_NONE;
@@ -28,7 +27,7 @@ bool QuickEspNow::begin (uint8_t channel, uint32_t wifi_interface, bool synchron
     }
 
     // check channel
-    if (channel != CURRENT_WIFI_CHANNEL && (channel < MIN_WIFI_CHANNEL || channel > MAX_WIFI_CHANNEL)) {
+    if (channel != CURRENT_WIFI_CHANNEL && (channel > MAX_WIFI_CHANNEL)) {
         DEBUG_ERROR (QESPNOW_TAG, "Invalid wifi channel %d", channel);
         return false;
     }
@@ -43,7 +42,8 @@ bool QuickEspNow::begin (uint8_t channel, uint32_t wifi_interface, bool synchron
     }
     setChannel (channel, ch2);
 
-    DEBUG_INFO (QESPNOW_TAG, ARDUHAL_LOG_COLOR (ARDUHAL_LOG_COLOR_RED) "Starting ESP-NOW in in channel %u interface %s", channel, wifi_if == WIFI_IF_STA ? "STA" : "AP");
+    DEBUG_INFO (QESPNOW_TAG, "Starting ESP-NOW in in channel %u interface %s", channel,
+               wifi_if == (WIFI_IF_STA) ? "STA" : "AP");
 
     this->channel = channel;
     initComms ();
@@ -69,7 +69,7 @@ bool QuickEspNow::setChannel (uint8_t channel, wifi_second_chan_t ch2) {
         DEBUG_WARN(QESPNOW_TAG, "Cannot set channel while following WiFi channel");
         return false;
     }
-    
+
     esp_err_t err_ok;
     if ((err_ok = esp_wifi_set_promiscuous (true))) {
         DEBUG_ERROR (QESPNOW_TAG, "Error setting promiscuous mode: %s", esp_err_to_name (err_ok));
@@ -195,7 +195,6 @@ int32_t QuickEspNow::sendEspNowMessage (comms_tx_queue_item_t* message) {
 
     DEBUG_VERBOSE (QESPNOW_TAG, "ESP-NOW message to " MACSTR, MAC2STR (message->dstAddress));
 
-
     addPeer (message->dstAddress);
     DEBUG_DBG (QESPNOW_TAG, "Peer added " MACSTR, MAC2STR (message->dstAddress));
     readyToSend = false;
@@ -204,6 +203,7 @@ int32_t QuickEspNow::sendEspNowMessage (comms_tx_queue_item_t* message) {
     error = esp_now_send (message->dstAddress, message->payload, message->payload_len);
     DEBUG_DBG (QESPNOW_TAG, "esp now send result = %s", esp_err_to_name (error));
     if (error != ESP_OK) {
+        readyToSend = true;
         DEBUG_WARN (QESPNOW_TAG, "Error sending message: %s", esp_err_to_name (error));
     }
     // if (error == ESP_OK) {
@@ -242,31 +242,18 @@ void QuickEspNow::espnowTxHandle () {
 void QuickEspNow::enableTransmit (bool enable) {
     DEBUG_DBG (QESPNOW_TAG, "Send esp-now task %s", enable ? "enabled" : "disabled");
     if (enable) {
-        if (espnowTxTask_cb) {
-            vTaskResume (espnowTxTask);
-            vTaskResume (espnowRxTask);
-        }
+        vTaskResume (espnowTxTask);
+        vTaskResume (espnowRxTask);
+
     } else {
-        if (espnowTxTask_cb) {
-            vTaskSuspend (espnowTxTask);
-            vTaskSuspend (espnowRxTask);
-        }
+        vTaskSuspend (espnowTxTask);
+        vTaskSuspend (espnowRxTask);
     }
 }
 
 bool QuickEspNow::addPeer (const uint8_t* peer_addr) {
-    esp_now_peer_info_t peer;
+    auto peer = esp_now_peer_info_t{};
     esp_err_t error = ESP_OK;
-
-    if (peer_list.get_peer_number () >= ESP_NOW_MAX_TOTAL_PEER_NUM) {
-        DEBUG_VERBOSE (QESPNOW_TAG, "Peer list full. Deleting older");
-        if (uint8_t* deleted_mac = peer_list.delete_peer ()) {
-            esp_now_del_peer (deleted_mac);
-        } else {
-            DEBUG_ERROR (QESPNOW_TAG, "Error deleting peer");
-            return false;
-        }
-    }
 
     if (peer_list.peer_exists (peer_addr)) {
         DEBUG_VERBOSE (QESPNOW_TAG, "Peer already exists");
@@ -282,6 +269,16 @@ bool QuickEspNow::addPeer (const uint8_t* peer_addr) {
             DEBUG_ERROR (QESPNOW_TAG, "Peer channel changed to %d", this->channel);
         }
         return true;
+    }
+
+    if (peer_list.get_peer_number () >= ESP_NOW_MAX_TOTAL_PEER_NUM) {
+        DEBUG_VERBOSE (QESPNOW_TAG, "Peer list full. Deleting older");
+        if (uint8_t* deleted_mac = peer_list.delete_peer ()) {
+            esp_now_del_peer (deleted_mac);
+        } else {
+            DEBUG_ERROR (QESPNOW_TAG, "Error deleting peer");
+            return false;
+        }
     }
 
     memcpy (peer.peer_addr, peer_addr, ESP_NOW_ETH_ALEN);
@@ -317,7 +314,7 @@ void QuickEspNow::initComms () {
     if (synchronousSend) {
         txQueueSize = 1;
     }
-    
+
     tx_queue = xQueueCreate (txQueueSize, sizeof (comms_tx_queue_item_t));
     xTaskCreateUniversal (espnowTxTask_cb, "espnow_loop", 8 * 1024, NULL, 1, &espnowTxTask, CONFIG_ARDUINO_RUNNING_CORE);
 
@@ -334,7 +331,6 @@ void QuickEspNow::espnowTxTask_cb (void* param) {
     for (;;) {
         quickEspNow.espnowTxHandle ();
     }
-
 }
 
 void QuickEspNow::espnowRxHandle () {
@@ -352,7 +348,6 @@ void QuickEspNow::espnowRxHandle () {
     } else {
         DEBUG_DBG (QESPNOW_TAG, "No message in queue");
     }
-
 }
 
 void QuickEspNow::espnowRxTask_cb (void* param) {
@@ -361,7 +356,7 @@ void QuickEspNow::espnowRxTask_cb (void* param) {
     }
 }
 
-void QuickEspNow::rx_cb (uint8_t* mac_addr, uint8_t* data, uint8_t len) {
+void QuickEspNow::rx_cb (uint8_t* mac_addr, uint8_t* data, int len) {
     espnow_frame_format_t* espnow_data = (espnow_frame_format_t*)(data - sizeof (espnow_frame_format_t));
     wifi_promiscuous_pkt_t* promiscuous_pkt = (wifi_promiscuous_pkt_t*)(data - sizeof (wifi_pkt_rx_ctrl_t) - sizeof (espnow_frame_format_t));
     wifi_pkt_rx_ctrl_t* rx_ctrl = &promiscuous_pkt->rx_ctrl;
@@ -390,7 +385,7 @@ void QuickEspNow::rx_cb (uint8_t* mac_addr, uint8_t* data, uint8_t len) {
     }
 }
 
-void QuickEspNow::tx_cb (uint8_t* mac_addr, uint8_t status) {
+void QuickEspNow::tx_cb (uint8_t* mac_addr, esp_now_send_status_t status) {
     quickEspNow.readyToSend = true;
     quickEspNow.sentStatus = status;
     quickEspNow.waitingForConfirmation = false;

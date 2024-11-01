@@ -8,10 +8,14 @@
 #ifndef _COMMS_HAL_h
 #define _COMMS_HAL_h
 
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+
 #if defined(ARDUINO) && ARDUINO >= 100
 #include "Arduino.h"
 #else
-#include "WProgram.h"
+// #include "WProgram.h"
 #endif
 
 //typedef void (*comms_hal_rcvd_data)(uint8_t* address, uint8_t* data, uint8_t len, signed int rssi, bool broadcast);
@@ -46,10 +50,9 @@ protected:
 	  */
 	virtual void initComms () = 0;
 
-
 public:
     Comms_halClass () {}
-    
+
 	/**
 	  * @brief Setup communication environment and establish the connection from node to gateway
 	  * @param gateway Address of gateway. It may be `NULL` in case this is used in the own gateway

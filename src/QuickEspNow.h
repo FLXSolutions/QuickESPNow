@@ -5,8 +5,8 @@
 #include "QuickEspNow_esp32.h"
 #elif defined ESP8266
 #include "QuickEspNow_esp8266.h"
-#else
-#error "Unsupported platform"
+#elif defined PLATFORMIO_NATIVE
+#include "QuickEspNow_native.h"
 #endif //ESP32
 
 #endif //_QUICK_ESPNOW_h

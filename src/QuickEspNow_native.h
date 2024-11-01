@@ -1,51 +1,20 @@
-#ifndef _QUICK_ESPNOW_ESP32_h
-#define _QUICK_ESPNOW_ESP32_h
-#ifdef ESP32
+#ifndef _QUICK_ESPNOW_NATIVE_h
+#define _QUICK_ESPNOW_NATIVE_h
 
-#ifdef INFO
-#undef INFO
-#endif
-
-#ifdef WARN
-#undef WARN
-#endif
-
-#ifdef ERROR
-#undef ERROR
-#endif
-
-#include "Arduino.h"
 #include "Comms_hal.h"
 
-#include <esp_now.h>
-#include <esp_wifi.h>
+#include "esp_now_defs_only.hpp"
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-#include <freertos/queue.h>
-#include <freertos/task.h>
-
-// Disable debug dependency if debug level is 0
-#if CORE_DEBUG_LEVEL > 0
-#include <QuickDebug.h>
-constexpr auto QESPNOW_TAG = "QESPNOW";
-#else // CORE_DEBUG_LEVEL
-#define DEBUG_ERROR(...)
-#define DEBUG_INFO(...)
-#define DEBUG_VERBOSE(...)
-#define DEBUG_WARN(...)
-#define DEBUG_DBG(...)
-#endif
+#include <ctime>
 
 //#define MEAS_TPUT
-
 static uint8_t ESPNOW_BROADCAST_ADDRESS[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 static const uint8_t MIN_WIFI_CHANNEL = 0;
 static const uint8_t MAX_WIFI_CHANNEL = 14;
 static const uint8_t CURRENT_WIFI_CHANNEL = 255;
 static const size_t ESPNOW_MAX_MESSAGE_LENGTH = 250; ///< @brief Maximum message length
 static const uint8_t ESPNOW_ADDR_LEN = 6; ///< @brief Address length
-static const uint8_t ESPNOW_QUEUE_SIZE = 1; ///< @brief Queue size
+static const uint8_t ESPNOW_QUEUE_SIZE = 3; ///< @brief Queue size
 
 #ifdef MEAS_TPUT
 static const time_t MEAS_TP_EVERY_MS = 10000; ///< @brief Measurement time period
@@ -68,7 +37,7 @@ typedef struct {
         uint8_t organization_identifier[3]; // 0x18fe34
         uint8_t type;                       // 4
         uint8_t version;
-        uint8_t body[0];
+        /*uint8_t body[0];*/
     } vendor_specific_content;
 } __attribute__ ((packed)) espnow_frame_format_t;
 
@@ -115,26 +84,26 @@ public:
 
 class QuickEspNow : public Comms_halClass {
 public:
-    bool begin (uint8_t channel = CURRENT_WIFI_CHANNEL, uint32_t interface = 0, bool synchronousSend = true) override;
-    void stop () override;
-    comms_send_error_t send (const uint8_t* dstAddress, const uint8_t* payload, size_t payload_len) override;
+    bool begin (uint8_t /*channel */= CURRENT_WIFI_CHANNEL, uint32_t /*interface*/ = 0, bool /*synchronousSend*/ = true) override {return true;}
+    void stop () override {}
+    comms_send_error_t send (const uint8_t* dstAddress, const uint8_t* payload, size_t payload_len) override {return {};}
     comms_send_error_t sendBcast (const uint8_t* payload, size_t payload_len) {
         return send (ESPNOW_BROADCAST_ADDRESS, payload, payload_len);
     }
-    void onDataRcvd (comms_hal_rcvd_data dataRcvd) override;
-    void onDataSent (comms_hal_sent_data sentResult) override;
+    void onDataRcvd (comms_hal_rcvd_data /*dataRcvd*/) override {}
+    void onDataSent (comms_hal_sent_data /*sentResult*/) override {}
     uint8_t getAddressLength ()  override { return ESPNOW_ADDR_LEN; }
     uint8_t getMaxMessageLength ()  override { return ESPNOW_MAX_MESSAGE_LENGTH; }
-    void enableTransmit (bool enable) override;
-    bool setChannel (uint8_t channel, wifi_second_chan_t ch2 = WIFI_SECOND_CHAN_NONE);
-    bool setWiFiBandwidth (wifi_interface_t iface = WIFI_IF_AP, wifi_bandwidth_t bw = WIFI_BW_HT20);
-    bool readyToSendData ();
+    void enableTransmit (bool enable) override {}
+    // bool setChannel (uint8_t channel, wifi_second_chan_t ch2 = WIFI_SECOND_CHAN_NONE);
+    // bool setWiFiBandwidth (wifi_interface_t iface = WIFI_IF_AP, wifi_bandwidth_t bw = WIFI_BW_HT20);
+    bool readyToSendData () {return true;}
 
 protected:
-    wifi_interface_t wifi_if;
-    PeerListClass peer_list;
-    TaskHandle_t espnowTxTask;
-    TaskHandle_t espnowRxTask;
+//    wifi_interface_t wifi_if;
+//    PeerListClass peer_list;
+//    TaskHandle_t espnowTxTask;
+//    TaskHandle_t espnowRxTask;
 
 #ifdef MEAS_TPUT
     unsigned long txDataSent = 0;
@@ -156,26 +125,26 @@ protected:
     uint8_t sentStatus;
     int queueSize = ESPNOW_QUEUE_SIZE;
 
-    QueueHandle_t tx_queue;
-    QueueHandle_t rx_queue;
+//    QueueHandle_t tx_queue;
+//    QueueHandle_t rx_queue;
     //SemaphoreHandle_t espnow_send_mutex;
     //uint8_t channel;
     bool followWiFiChannel = false;
 
-    void initComms ();
-    bool addPeer (const uint8_t* peer_addr);
-    static void espnowTxTask_cb (void* param);
-    int32_t sendEspNowMessage (comms_tx_queue_item_t* message);
-    void espnowTxHandle ();
+    void initComms () {}
+    bool addPeer (const uint8_t* peer_addr) {return true;}
+    static void espnowTxTask_cb (void* param) {}
+    int32_t sendEspNowMessage (comms_tx_queue_item_t* message) {return 0;}
+    void espnowTxHandle () {}
 
-    static void espnowRxTask_cb (void* param);
-    void espnowRxHandle ();
+    static void espnowRxTask_cb (void* /*param*/) {}
+    void espnowRxHandle () {}
 
-    static void ICACHE_FLASH_ATTR rx_cb (uint8_t* mac_addr, uint8_t* data, int len);
-    static void ICACHE_FLASH_ATTR tx_cb (uint8_t* mac_addr, esp_now_send_status_t status);
+//    static void ICACHE_FLASH_ATTR rx_cb (uint8_t* mac_addr, uint8_t* data, int len);
+//    static void ICACHE_FLASH_ATTR tx_cb (uint8_t* mac_addr, esp_now_send_status_t status);
 };
 
 extern QuickEspNow quickEspNow;
 
-#endif // ESP32
-#endif // _QUICK_ESPNOW_ESP32_h
+// #endif // ESP32
+#endif // _QUICK_ESPNOW_NATIVE_h
