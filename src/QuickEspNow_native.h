@@ -86,7 +86,7 @@ class QuickEspNow : public Comms_halClass {
 public:
     bool begin (uint8_t /*channel */= CURRENT_WIFI_CHANNEL, uint32_t /*interface*/ = 0, bool /*synchronousSend*/ = true) override {return true;}
     void stop () override {}
-    comms_send_error_t send (const uint8_t* dstAddress, const uint8_t* payload, size_t payload_len) override {return {};}
+    comms_send_error_t send (const uint8_t* /*dstAddress*/, const uint8_t* /*payload*/, size_t /*payload_len*/) override {return {};}
     comms_send_error_t sendBcast (const uint8_t* payload, size_t payload_len) {
         return send (ESPNOW_BROADCAST_ADDRESS, payload, payload_len);
     }
@@ -94,7 +94,7 @@ public:
     void onDataSent (comms_hal_sent_data /*sentResult*/) override {}
     uint8_t getAddressLength ()  override { return ESPNOW_ADDR_LEN; }
     uint8_t getMaxMessageLength ()  override { return ESPNOW_MAX_MESSAGE_LENGTH; }
-    void enableTransmit (bool enable) override {}
+    void enableTransmit (bool /*enable*/) override {}
     // bool setChannel (uint8_t channel, wifi_second_chan_t ch2 = WIFI_SECOND_CHAN_NONE);
     // bool setWiFiBandwidth (wifi_interface_t iface = WIFI_IF_AP, wifi_bandwidth_t bw = WIFI_BW_HT20);
     bool readyToSendData () {return true;}
@@ -132,9 +132,9 @@ protected:
     bool followWiFiChannel = false;
 
     void initComms () {}
-    bool addPeer (const uint8_t* peer_addr) {return true;}
-    static void espnowTxTask_cb (void* param) {}
-    int32_t sendEspNowMessage (comms_tx_queue_item_t* message) {return 0;}
+    bool addPeer (const uint8_t* /*peer_addr*/) {return true;}
+    static void espnowTxTask_cb (void* /*param*/) {}
+    int32_t sendEspNowMessage (comms_tx_queue_item_t* /*message*/) {return 0;}
     void espnowTxHandle () {}
 
     static void espnowRxTask_cb (void* /*param*/) {}
