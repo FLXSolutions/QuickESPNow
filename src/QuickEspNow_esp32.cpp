@@ -57,6 +57,10 @@ void QuickEspNow::stop () {
     esp_now_unregister_recv_cb ();
     esp_now_unregister_send_cb ();
     esp_now_deinit ();
+    for (size_t i = 0; i < peer_list.get_peer_number(); i++)
+    {
+        peer_list.delete_peer();
+    }
 }
 
 bool QuickEspNow::readyToSendData () {
