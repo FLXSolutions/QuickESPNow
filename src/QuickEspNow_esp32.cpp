@@ -259,6 +259,10 @@ bool QuickEspNow::addPeer (const uint8_t* peer_addr) {
     auto peer = esp_now_peer_info_t{};
     esp_err_t error = ESP_OK;
 
+    if (peer_list.peer_exists (peer_addr) && !esp_now_is_peer_exist(peer_addr)) {
+        peer_list.delete_peer (peer_addr);
+    }
+
     if (peer_list.peer_exists (peer_addr)) {
         DEBUG_VERBOSE (QESPNOW_TAG, "Peer already exists");
         ESP_ERROR_CHECK (esp_now_get_peer (peer_addr, &peer));
