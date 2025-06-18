@@ -51,6 +51,14 @@ bool QuickEspNow::begin (uint8_t channel, uint32_t wifi_interface, bool synchron
 }
 
 void QuickEspNow::stop () {
+    enableTransmit(false);
+
+    unsigned long start = millis();
+    while ((!readyToSend || uxQueueMessagesWaiting(tx_queue) > 0) &&
+           millis() - start < 200) {
+        delay(1);
+    }
+
     DEBUG_INFO (QESPNOW_TAG, "-------------> ESP-NOW STOP");
     vTaskDelete (espnowTxTask);
     vTaskDelete (espnowRxTask);
